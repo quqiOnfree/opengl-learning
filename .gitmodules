@@ -4,3 +4,6 @@
 [submodule "glew-cmake"]
 	path = glew-cmake
 	url = https://github.com/Perlmint/glew-cmake.git
+[submodule "OpenMesh"]
+	path = OpenMesh
+	url = https://gitlab.vci.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
