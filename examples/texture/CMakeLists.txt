@@ -6,12 +6,7 @@ target_compile_definitions(texture PRIVATE
 target_link_libraries(texture PRIVATE
     glfw
     libglew_static
-    glm
-    stb
-    Qt6::Core
-    Qt6::Gui
-    OpenMeshCore
-    OpenMeshTools)
+    stb)
 if (WIN32)
     target_link_libraries(texture PRIVATE OpenGL32)
 endif()

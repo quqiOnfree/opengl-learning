@@ -7,12 +7,6 @@
 #include <sstream>
 #include <memory>
 
-#include <OpenMesh/Core/IO/MeshIO.hh>
-#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #include <stb_image.h>
 
 #include "proxy.hpp"

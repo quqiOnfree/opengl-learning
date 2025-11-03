@@ -10,11 +10,6 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <stb_image.h>
-
 typedef OpenMesh::TriMesh_ArrayKernelT<> MyMesh;
 
 static unsigned int CompileShader(int type, const std::string& source)
