@@ -10,6 +10,11 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <stb_image.h>
+
 typedef OpenMesh::TriMesh_ArrayKernelT<> MyMesh;
 
 static unsigned int CompileShader(int type, const std::string& source)
@@ -61,7 +66,10 @@ public:
     mesh_loader(const std::string& filename):
         vertices_(nullptr), VAO_(0), VBO_(0)
     {
-        assert(OpenMesh::IO::read_mesh(mesh_, filename));
+        if (!OpenMesh::IO::read_mesh(mesh_, filename))
+        {
+            throw std::runtime_error("Error: Cannot read mesh from " + filename);
+        }
 
         glGenVertexArrays(1, &VAO_);
         glGenBuffers(1, &VBO_);
@@ -71,50 +79,30 @@ public:
         vertices_ = std::make_unique<float[]>(mesh_.n_faces() * 3 * 6);
         size_t idx = 0;
 
-        MyMesh::Point minCoord = mesh_.point(MyMesh::VertexHandle(0));
-        MyMesh::Point maxCoord = mesh_.point(MyMesh::VertexHandle(0));
-        
-        for (const auto& vh : mesh_.vertices()) {
-            const auto& p = mesh_.point(vh);
-            for (int i = 0; i < 3; ++i) {
-                if (p[i] < minCoord[i]) minCoord[i] = p[i];
-                if (p[i] > maxCoord[i]) maxCoord[i] = p[i];
-            }
-        }
-        
-        MyMesh::Point center = (minCoord + maxCoord) * 0.5f;
-        float maxExtent = 0.0f;
-        for (int i = 0; i < 3; ++i) {
-            float extent = maxCoord[i] - minCoord[i];
-            if (extent > maxExtent) maxExtent = extent;
-        }
-        
-        float scale = 2.0f / maxExtent;
-
         for (const auto& face : mesh_.faces())
         {
             const auto& vh = face.vertices();
             auto iter = vh.begin();
             const auto& point1 = mesh_.point(iter++);
-            vertices_[idx++] = (point1[0] - center[0]) * scale;
-            vertices_[idx++] = (point1[1] - center[1]) * scale;
-            vertices_[idx++] = -(point1[2] - center[2]) * scale;
+            vertices_[idx++] = point1[0];
+            vertices_[idx++] = point1[1];
+            vertices_[idx++] = point1[2];
             vertices_[idx++] = 1.0f; // R
             vertices_[idx++] = 0.0f; // G
             vertices_[idx++] = 0.0f; // B
 
             const auto& point2 = mesh_.point(iter++);
-            vertices_[idx++] = (point2[0] - center[0]) * scale;
-            vertices_[idx++] = (point2[1] - center[1]) * scale;
-            vertices_[idx++] = -(point2[2] - center[2]) * scale;
+            vertices_[idx++] = point2[0];
+            vertices_[idx++] = point2[1];
+            vertices_[idx++] = point2[2];
             vertices_[idx++] = 0.0f; // R
             vertices_[idx++] = 1.0f; // G
             vertices_[idx++] = 0.0f; // B
 
             const auto& point3 = mesh_.point(iter++);
-            vertices_[idx++] = (point3[0] - center[0]) * scale;
-            vertices_[idx++] = (point3[1] - center[1]) * scale;
-            vertices_[idx++] = -(point3[2] - center[2]) * scale;
+            vertices_[idx++] = point3[0];
+            vertices_[idx++] = point3[1];
+            vertices_[idx++] = point3[2];
             vertices_[idx++] = 0.0f; // R
             vertices_[idx++] = 0.0f; // G
             vertices_[idx++] = 1.0f; // B
