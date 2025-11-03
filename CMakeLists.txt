@@ -22,3 +22,4 @@ target_compile_definitions(stb INTERFACE STB_IMAGE_IMPLEMENTATION=1)
 
 add_subdirectory(examples/first)
 add_subdirectory(examples/texture)
+add_subdirectory(examples/cube_shower)
