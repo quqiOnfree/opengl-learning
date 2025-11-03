@@ -14,16 +14,16 @@ endif()
 
 add_custom_command(TARGET skull_shower POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/examples/skull_shower/vertex.glsl"
+    "${CMAKE_CURRENT_LIST_DIR}/vertex.glsl"
     "$<TARGET_FILE_DIR:skull_shower>/vertex.glsl"
 )
 add_custom_command(TARGET skull_shower POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/examples/skull_shower/fragment.glsl"
+    "${CMAKE_CURRENT_LIST_DIR}/fragment.glsl"
     "$<TARGET_FILE_DIR:skull_shower>/fragment.glsl"
 )
 add_custom_command(TARGET skull_shower POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/examples/skull_shower/skull.stl"
+    "${CMAKE_CURRENT_LIST_DIR}/skull.stl"
     "$<TARGET_FILE_DIR:skull_shower>/skull.stl"
 )
