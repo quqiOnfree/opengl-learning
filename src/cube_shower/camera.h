@@ -10,7 +10,9 @@ enum Camera_Movement {
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+    UP,
+    DOWN
 };
 
 // 默认相机值
@@ -130,6 +132,16 @@ void processKeyboard(Camera* camera, enum Camera_Movement direction, float delta
         camera->Position[0] += camera->Right[0] * velocity;
         camera->Position[1] += camera->Right[1] * velocity;
         camera->Position[2] += camera->Right[2] * velocity;
+        break;
+    case UP:
+        camera->Position[0] += camera->Up[0] * velocity;
+        camera->Position[1] += camera->Up[1] * velocity;
+        camera->Position[2] += camera->Up[2] * velocity;
+        break;
+    case DOWN:
+        camera->Position[0] -= camera->Up[0] * velocity;
+        camera->Position[1] -= camera->Up[1] * velocity;
+        camera->Position[2] -= camera->Up[2] * velocity;
         break;
     }
 }
