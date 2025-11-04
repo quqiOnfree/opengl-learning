@@ -40,25 +40,6 @@ typedef struct Camera {
     float Zoom;
 } Camera;
 
-void initCamera(Camera* camera) {
-    camera->Position[0] = 0.0f;
-    camera->Position[1] = 0.0f;
-    camera->Position[2] = 3.0f;
-
-    camera->WorldUp[0] = 0.0f;
-    camera->WorldUp[1] = 1.0f;
-    camera->WorldUp[2] = 0.0f;
-
-    camera->Yaw = YAW;
-    camera->Pitch = PITCH;
-
-    camera->MovementSpeed = SPEED;
-    camera->MouseSensitivity = SENSITIVITY;
-    camera->Zoom = ZOOM;
-
-   void updateCameraVectors(camera);
-}
-
 void updateCameraVectors(Camera* camera) {
     // 计算新的Front向量
     float front[3];
@@ -88,6 +69,25 @@ void updateCameraVectors(Camera* camera) {
     camera->Up[0] = camera->Right[1] * camera->Front[2] - camera->Right[2] * camera->Front[1];
     camera->Up[1] = camera->Right[2] * camera->Front[0] - camera->Right[0] * camera->Front[2];
     camera->Up[2] = camera->Right[0] * camera->Front[1] - camera->Right[1] * camera->Front[0];
+}
+
+void initCamera(Camera* camera) {
+    camera->Position[0] = 0.0f;
+    camera->Position[1] = 0.0f;
+    camera->Position[2] = 3.0f;
+
+    camera->WorldUp[0] = 0.0f;
+    camera->WorldUp[1] = 1.0f;
+    camera->WorldUp[2] = 0.0f;
+
+    camera->Yaw = YAW;
+    camera->Pitch = PITCH;
+
+    camera->MovementSpeed = SPEED;
+    camera->MouseSensitivity = SENSITIVITY;
+    camera->Zoom = ZOOM;
+
+    updateCameraVectors(camera);
 }
 
 void getViewMatrix(Camera* camera, float* viewMatrix) {
