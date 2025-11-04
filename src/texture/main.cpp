@@ -9,6 +9,10 @@
 
 #include <stb_image.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "proxy.hpp"
 
 static unsigned int CompileShader(int type, const std::string& source)
@@ -155,8 +159,8 @@ int main(void)
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
         // set the texture wrapping parameters
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
         // set texture filtering parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -165,33 +169,34 @@ int main(void)
         // flip vertically so texture coordinates match image origin if needed
         stbi_set_flip_vertically_on_load(true);
         unsigned char *data = stbi_load("container.jpeg", &width, &height, &nrChannels, 0);
-        std::cout << "stbi_load returned ptr=" << (void*)data << " w=" << width << " h=" << height << " ch=" << nrChannels << std::endl;
-        if (data)
-        {
-            GLenum format = GL_RGB;
-            if (nrChannels == 1) format = GL_RED;
-            else if (nrChannels == 3) format = GL_RGB;
-            else if (nrChannels == 4) format = GL_RGBA;
-            std::cout << "Before glTexImage2D format=" << format << " size=" << width << "x" << height << std::endl;
-            // ensure byte-aligned rows for image uploads
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            GLenum internalFormat = GL_RGB8;
-            if (format == GL_RED) internalFormat = GL_R8;
-            else if (format == GL_RGB) internalFormat = GL_RGB8;
-            else if (format == GL_RGBA) internalFormat = GL_RGBA8;
-            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-            std::cout << "After glTexImage2D" << std::endl;
-            glGenerateMipmap(GL_TEXTURE_2D);
-            std::cout << "After glGenerateMipmap" << std::endl;
-            GLenum err = glGetError();
-            std::cout << "glTexImage2D glGetError=" << err << std::endl;
-        }
-        else
+        std::cout
+            << "stbi_load returned ptr=" << (void*)data
+            << " w=" << width
+            << " h=" << height
+            << " ch=" << nrChannels
+            << std::endl;
+        if (data == nullptr)
         {
             std::cerr << "Failed to load texture\n";
-            stbi_image_free(data);
             return -1;
         }
+        GLenum format = GL_RGB;
+        if (nrChannels == 1) format = GL_RED;
+        else if (nrChannels == 3) format = GL_RGB;
+        else if (nrChannels == 4) format = GL_RGBA;
+        std::cout << "Before glTexImage2D format=" << format << " size=" << width << "x" << height << std::endl;
+        // ensure byte-aligned rows for image uploads
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        GLenum internalFormat = GL_RGB8;
+        if (format == GL_RED) internalFormat = GL_R8;
+        else if (format == GL_RGB) internalFormat = GL_RGB8;
+        else if (format == GL_RGBA) internalFormat = GL_RGBA8;
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        std::cout << "After glTexImage2D" << std::endl;
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cout << "After glGenerateMipmap" << std::endl;
+        GLenum err = glGetError();
+        std::cout << "glTexImage2D glGetError=" << err << std::endl;
         stbi_image_free(data);
 
         // set the sampler uniform to texture unit 0
@@ -204,13 +209,21 @@ int main(void)
             std::cout << "Sampler uniform set to 0" << std::endl;
         }
 
-    std::cout << "Entering render loop" << std::endl;
-    /* Loop until the user closes the window */
+        unsigned int transformLoc = glGetUniformLocation(program, "transform");
+
+        std::cout << "Entering render loop" << std::endl;
+        /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
             /* Render here */
             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
+
+            float time = (float)glfwGetTime();
+            glm::mat4 trans = glm::mat4(1.0f);
+            trans = glm::translate(trans, glm::vec3(0.0f, -0.5f * glm::sin(time), 0.0f));
+            trans = glm::rotate(trans, time, glm::vec3(0.0f, 0.0f, 1.0f));
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
             // bind our texture to texture unit 0 before drawing
             glActiveTexture(GL_TEXTURE0);
@@ -224,7 +237,7 @@ int main(void)
             /* Poll for and process events */
             glfwPollEvents();
         }
-    std::cout << "Exited render loop" << std::endl;
+        std::cout << "Exited render loop" << std::endl;
     }
 
     glfwTerminate();

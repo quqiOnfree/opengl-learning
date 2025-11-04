@@ -6,7 +6,8 @@ target_compile_definitions(texture PRIVATE
 target_link_libraries(texture PRIVATE
     glfw
     libglew_static
-    stb)
+    stb
+    glm)
 if (WIN32)
     target_link_libraries(texture PRIVATE OpenGL32)
 endif()
