@@ -4,6 +4,7 @@ target_compile_definitions(skull_shower PRIVATE _USE_MATH_DEFINES=1)
 target_link_libraries(skull_shower PRIVATE
     glfw
     libglew_static
+    glm
     Qt6::Core
     Qt6::Gui
     OpenMeshCore

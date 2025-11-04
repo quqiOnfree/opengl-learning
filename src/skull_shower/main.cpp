@@ -10,6 +10,10 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 typedef OpenMesh::TriMesh_ArrayKernelT<> MyMesh;
 
 static unsigned int CompileShader(int type, const std::string& source)
@@ -188,6 +192,7 @@ int main(void)
     mesh_loader loader("skull.stl");
 
     glUseProgram(program);
+    GLint transformLoc = glGetUniformLocation(program, "transform");
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -195,6 +200,14 @@ int main(void)
         /* Render here */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        float time = (float)glfwGetTime();
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(0.0f, -0.7f, 0.0f));
+        trans = glm::rotate(trans, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        trans = glm::rotate(trans, time, glm::vec3(0.0f, 0.0f, 1.0f));
+        trans = glm::scale(trans, glm::vec3(0.1f, 0.1f, 0.2f));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         loader.draw();
 
