@@ -16,6 +16,9 @@
 
 typedef OpenMesh::TriMesh_ArrayKernelT<> MyMesh;
 
+constexpr unsigned int SCR_WIDTH = 1280;
+constexpr unsigned int SCR_HEIGHT = 720;
+
 static unsigned int CompileShader(int type, const std::string& source)
 {
     unsigned int shader = glCreateShader(type);
@@ -159,7 +162,7 @@ int main(void)
     }
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(1280, 720, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Hello World", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -192,7 +195,6 @@ int main(void)
     mesh_loader loader("skull.stl");
 
     glUseProgram(program);
-    GLint transformLoc = glGetUniformLocation(program, "transform");
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -202,12 +204,22 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float time = (float)glfwGetTime();
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.0f, -0.7f, 0.0f));
-        trans = glm::rotate(trans, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        trans = glm::rotate(trans, time, glm::vec3(0.0f, 0.0f, 1.0f));
-        trans = glm::scale(trans, glm::vec3(0.1f, 0.1f, 0.2f));
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        GLint modelLoc = glGetUniformLocation(program, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+        glm::mat4 view = glm::mat4(1.0f);
+        view = glm::translate(view, glm::vec3(0.0f, -1.0f, -20.0f));
+        GLint viewLoc = glGetUniformLocation(program, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+        glm::mat4 projection = glm::mat4(1.0f);
+        projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH * 1.0f / SCR_HEIGHT, 0.1f, 100.0f);
+        GLint projectionLoc = glGetUniformLocation(program, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         loader.draw();
 
