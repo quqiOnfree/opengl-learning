@@ -19,6 +19,52 @@ typedef OpenMesh::TriMesh_ArrayKernelT<> MyMesh;
 constexpr unsigned int SCR_WIDTH = 1280;
 constexpr unsigned int SCR_HEIGHT = 720;
 
+class Camera
+{
+    glm::vec3 position_;
+    glm::vec3 front_;
+    glm::vec3 up_;
+
+public:
+    Camera():
+        position_(0.0f, 0.0f, 3.0f),
+        front_(0.0f, 0.0f, -1.0f),
+        up_(0.0f, 1.0f, 0.0f)
+    {}
+
+    ~Camera() = default;
+
+    glm::mat4 getViewMatrix() const
+    {
+        return glm::lookAt(position_, position_ + front_, up_);
+    }
+
+    void processKeyboardInput(int key, float deltaTime)
+    {
+        float velocity = 2.5f * deltaTime;
+        if (key == GLFW_KEY_W)
+            position_ += front_ * velocity;
+        if (key == GLFW_KEY_S)
+            position_ -= front_ * velocity;
+        if (key == GLFW_KEY_A)
+            position_ -= glm::normalize(glm::cross(front_, up_)) * velocity;
+        if (key == GLFW_KEY_D)
+            position_ += glm::normalize(glm::cross(front_, up_)) * velocity;
+        if (key == GLFW_KEY_SPACE)
+            position_ += up_ * velocity;
+        if (key == GLFW_KEY_LEFT_SHIFT)
+            position_ -= up_ * velocity;
+    }
+
+    glm::vec3 getPosition() const { return position_; }
+    glm::vec3 getFront() const { return front_; }
+    glm::vec3 getUp() const { return up_; }
+
+    void setPosition(const glm::vec3& position) { position_ = position; }
+    void setFront(const glm::vec3& front) { front_ = front; }
+    void setUp(const glm::vec3& up) { up_ = up; }
+};
+
 static unsigned int CompileShader(int type, const std::string& source)
 {
     unsigned int shader = glCreateShader(type);
@@ -133,10 +179,12 @@ public:
             VBO_ = 0;
         }
         vertices_.reset();
+        mesh_.clear();
     }
 
     void draw()
     {
+        if (!VAO_) return;
         glBindVertexArray(VAO_);
         glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(mesh_.n_faces() * 3));
         glBindVertexArray(0);
@@ -149,6 +197,56 @@ private:
     std::unique_ptr<float[]> vertices_;
     unsigned int VAO_, VBO_;
 };
+
+Camera camera;
+
+void processKeyboardInput(GLFWwindow* window, float deltaTime)
+{
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_W, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_S, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_A, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_D, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_SPACE, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        camera.processKeyboardInput(GLFW_KEY_LEFT_SHIFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    static float lastX = xpos, lastY = ypos;
+    static float yaw = -90.0f;
+    static float pitch = 0.0f;
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // 注意这里是相反的，因为y坐标是从底部往顶部依次增大的
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.05f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw   += xoffset;
+    pitch += yoffset;
+
+    if(pitch > 89.0f)
+        pitch = 89.0f;
+    if(pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    camera.setFront(glm::normalize(front));
+}
 
 int main(void)
 {
@@ -171,14 +269,15 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glEnable(GL_DEPTH_TEST);
 
     if (glewInit() != GLEW_OK)
     {
         std::cerr << "GLEW init error\n";
         return -1;
     }
-
-    glEnable(GL_DEPTH_TEST);
 
     std::ifstream vertex_file("vertex.glsl");
     std::ifstream fragment_file("fragment.glsl");
@@ -196,6 +295,8 @@ int main(void)
 
     glUseProgram(program);
 
+    float lastFrame = (float)glfwGetTime();
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
@@ -204,15 +305,17 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float time = (float)glfwGetTime();
+        float deltaTime = time - lastFrame;
+        lastFrame = time;
+        processKeyboardInput(window, deltaTime);
 
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        // model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         GLint modelLoc = glGetUniformLocation(program, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, -1.0f, -20.0f));
+        glm::mat4 view = camera.getViewMatrix();
         GLint viewLoc = glGetUniformLocation(program, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
