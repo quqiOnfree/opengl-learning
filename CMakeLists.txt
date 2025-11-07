@@ -16,10 +16,16 @@ add_subdirectory(glew-cmake)
 add_subdirectory(OpenMesh)
 add_subdirectory(glm)
 
+# Library stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE stb)
 target_compile_definitions(stb INTERFACE STB_IMAGE_IMPLEMENTATION=1)
 
+# Library colony
+add_library(colony INTERFACE)
+target_link_directories(colony INTERFACE plf_colony)
+
 add_subdirectory(src/skull_shower)
 add_subdirectory(src/texture)
 add_subdirectory(src/cube_shower)
+add_subdirectory(src/lighting)
