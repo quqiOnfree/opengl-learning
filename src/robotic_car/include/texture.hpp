@@ -152,6 +152,7 @@ void main()
     void reloadProjection() {
         glm::mat4 projection = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(45.0f), window_.getWidth() * 1.0f / window_.getHeight(), 0.1f, 10000.0f);
+        shader_.use();
         shader_.setUniform("projection", [](GLint loc, const glm::mat4& projection){
             glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(projection));
         }, projection);

@@ -27,7 +27,7 @@ public:
         release();
     }
 
-    void reset(const std::string& vertexSource, const std::string& fragmentSource)
+    void reset(std::string_view vertexSource, std::string_view fragmentSource)
     {
         release();
         programID_ = CreateShader(vertexSource, fragmentSource);
@@ -39,19 +39,19 @@ public:
     }
 
     template<class Func, class... Args>
-    void setUniform(const std::string& name, Func&& func, Args&&... args)
+    void setUniform(std::string_view name, Func&& func, Args&&... args)
     {
-        GLint location = glGetUniformLocation(programID_, name.c_str());
+        GLint location = glGetUniformLocation(programID_, name.data());
         std::invoke(std::forward<Func>(func), location, std::forward<Args>(args)...);
     }
 
     unsigned int getProgramID() const { return programID_; }
 
 private:
-    static unsigned int CompileShader(int type, const std::string& source)
+    static unsigned int CompileShader(int type, std::string_view source)
     {
         unsigned int shader = glCreateShader(type);
-        const char* src = source.c_str();
+        const char* src = source.data();
         glShaderSource(shader, 1, &src, nullptr);
         glCompileShader(shader);
 
@@ -75,7 +75,7 @@ private:
         return shader;
     }
 
-    static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
+    static unsigned int CreateShader(std::string_view vertexShader, std::string_view fragmentShader)
     {
         unsigned int program = glCreateProgram();
         unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);

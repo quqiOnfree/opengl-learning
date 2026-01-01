@@ -21,3 +21,9 @@ add_custom_command(TARGET robotic_car POST_BUILD
     "${CMAKE_CURRENT_LIST_DIR}/line.jpg"
     "$<TARGET_FILE_DIR:robotic_car>/line.jpg"
 )
+
+add_custom_command(TARGET robotic_car POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_LIST_DIR}/cube.stl"
+    "$<TARGET_FILE_DIR:robotic_car>/cube.stl"
+)

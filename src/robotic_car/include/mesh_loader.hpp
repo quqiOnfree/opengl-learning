@@ -12,10 +12,10 @@
 
 using MyMesh = OpenMesh::TriMesh_ArrayKernelT<>;
 
-class VertexBufferObject
+class MeshVertexBufferObject
 {
 public:
-    VertexBufferObject(const MyMesh& mesh):
+    MeshVertexBufferObject(const MyMesh& mesh):
         vertices_(nullptr), VBO_(0)
     {
         n_faces_ = mesh.n_faces();
@@ -51,7 +51,7 @@ public:
     }
 
     template<std::size_t N>
-    VertexBufferObject(const float (&matrix)[N][3][3])
+    MeshVertexBufferObject(const float (&matrix)[N][3][3])
     {
         vertices_ = std::make_unique<float[]>(N);
         size_t idx = 0;
@@ -76,7 +76,7 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    ~VertexBufferObject() noexcept {
+    ~MeshVertexBufferObject() noexcept {
         release();
     }
 
@@ -88,7 +88,7 @@ public:
         vertices_.reset();
     }
 
-    void reset(VertexBufferObject&& VBO)
+    void reset(MeshVertexBufferObject&& VBO)
     {
         release();
         vertices_ = std::move(VBO.vertices_);
@@ -118,8 +118,8 @@ private:
 class VertexArrayObject
 {
 public:
-    template<class Set>
-    VertexArrayObject(const VertexBufferObject& VBO, Set set):
+    template<typename Set>
+    VertexArrayObject(const MeshVertexBufferObject& VBO, Set set):
         VBO_(VBO)
     {
         glGenVertexArrays(1, &VAO_);
@@ -160,5 +160,5 @@ public:
 
 private:
     unsigned int VAO_;
-    const VertexBufferObject& VBO_;
+    const MeshVertexBufferObject& VBO_;
 };
