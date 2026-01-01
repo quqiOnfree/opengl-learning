@@ -16,3 +16,6 @@
 [submodule "plf_colony"]
 	path = plf_colony
 	url = https://github.com/mattreecebentley/plf_colony.git
+[submodule "freetype"]
+	path = freetype
+	url = https://github.com/freetype/freetype.git
