@@ -15,6 +15,7 @@ add_subdirectory(glfw)
 add_subdirectory(glew-cmake)
 add_subdirectory(OpenMesh)
 add_subdirectory(glm)
+add_subdirectory(freetype)
 
 # Library stb
 add_library(stb INTERFACE)
@@ -29,3 +30,4 @@ add_subdirectory(src/skull_shower)
 add_subdirectory(src/texture)
 add_subdirectory(src/cube_shower)
 add_subdirectory(src/lighting)
+add_subdirectory(src/robotic_car)
