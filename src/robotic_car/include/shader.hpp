@@ -4,14 +4,15 @@
 
 #include <iostream>
 #include <string>
+#include <string_view>
 
 #include "window.hpp"
 
 class Shader {
 public:
-  Shader(Window &window, const std::string &vertexSource,
-         const std::string &fragmentSource) {
-    programID_ = CreateShader(vertexSource, fragmentSource);
+  Shader(Window &window, std::string_view vertexSource,
+         std::string_view fragmentSource)
+      : programID_(CreateShader(vertexSource, fragmentSource)) {
     if (programID_ == 0) {
       throw std::runtime_error("Failed to create shader program");
     }
@@ -21,6 +22,16 @@ public:
   }
 
   ~Shader() = default;
+  Shader(const Shader &) = delete;
+  Shader &operator=(const Shader &) = delete;
+  Shader(Shader &&s) noexcept : programID_(s.programID_) { s.programID_ = 0; }
+  Shader &operator=(Shader &&s) noexcept {
+    if (this != &s) {
+      programID_ = s.programID_;
+      s.programID_ = 0;
+    }
+    return *this;
+  }
 
   void use() { glUseProgram(programID_); }
 
@@ -40,13 +51,14 @@ private:
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
 
-    int result;
+    int result = 0;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &result);
     if (result == GL_FALSE) {
-      int length;
+      int length = 0;
       glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
       char *message = static_cast<char *>(alloca(length + 1));
-      message[length] = 0;
+      std::span<char> span_message(message, length + 1);
+      span_message[length] = 0;
       glGetShaderInfoLog(shader, length, &length, message);
       std::cerr << "Failed to compile "
                 << (type == GL_VERTEX_SHADER ? "vertex" : "fragment")

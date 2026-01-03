@@ -32,7 +32,7 @@ public:
   };
 
   CarModel(Window &window, const MyMesh &mesh)
-      : window_(window), cubeVBO_(mesh), cubeVAO_(cubeVBO_, []() {
+      : window_(&window), cubeVBO_(mesh), cubeVAO_(cubeVBO_, []() {
           glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                                 (void *)0);
           glEnableVertexAttribArray(0);
@@ -44,12 +44,33 @@ public:
     reloadProjection();
   }
   ~CarModel() = default;
+  CarModel(const CarModel &) = delete;
+  CarModel &operator=(const CarModel &) = delete;
+  CarModel(CarModel &&c) noexcept
+      : window_(c.window_), cubeVBO_(std::move(c.cubeVBO_)),
+        cubeVAO_(std::move(c.cubeVAO_)),
+        yellow_shader_(std::move(c.yellow_shader_)),
+        green_shader_(std::move(c.green_shader_)),
+        blue_shader_(std::move(c.blue_shader_)) {}
+  CarModel &operator=(CarModel &&c) noexcept {
+    if (this != &c) {
+      window_ = c.window_;
+      cubeVBO_ = std::move(c.cubeVBO_);
+      cubeVAO_ = std::move(c.cubeVAO_);
+      yellow_shader_ = std::move(c.yellow_shader_);
+      green_shader_ = std::move(c.green_shader_);
+      blue_shader_ = std::move(c.blue_shader_);
+    }
+    return *this;
+  }
 
   void reloadProjection() {
     glm::mat4 projection = glm::mat4(1.0f);
-    projection = glm::perspective(
-        glm::radians(45.0f), window_.getWidth() * 1.0f / window_.getHeight(),
-        0.1f, 10000.0f);
+    projection =
+        glm::perspective(glm::radians(45.0f),
+                         static_cast<float>(window_->getWidth()) * 1.0f /
+                             static_cast<float>(window_->getHeight()),
+                         0.1f, 10000.0f);
 
     yellow_shader_.use();
     yellow_shader_.setUniform(
@@ -175,10 +196,12 @@ private:
   }
 
 private:
-  Window &window_;
+  Window *window_;
   MeshVertexBufferObject cubeVBO_;
   VertexArrayObject cubeVAO_;
-  inline static constexpr char vertex_glsl[] = R"(
+  inline static constexpr char // NOLINT(cppcoreguidelines-avoid-c-arrays)
+      vertex_glsl[] =
+          R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
@@ -191,7 +214,9 @@ void main()
     gl_Position = projection * view * model * vec4(aPos, 1.0);
 }
 )";
-  inline static constexpr char fragment_glsl[] = R"(
+  inline static constexpr char // NOLINT(cppcoreguidelines-avoid-c-arrays)
+      fragment_glsl[] =
+          R"(
 #version 330 core
 out vec4 FragColor;
 
@@ -199,21 +224,27 @@ void main()
 {{
     FragColor = vec4({}, {}, {}, 1.0);
 }})";
-  Shader yellow_shader_ = {window_, vertex_glsl,
-                           std::format(fragment_glsl, 1.0f, 1.0f, 0.0f)};
-  Shader green_shader_ = {window_, vertex_glsl,
-                          std::format(fragment_glsl, 0.0f, 1.0f, 0.0f)};
-  Shader blue_shader_ = {window_, vertex_glsl,
-                         std::format(fragment_glsl, 0.0f, 0.0f, 1.0f)};
+  inline static std::string yellow_fragment_glsl =
+      std::format(fragment_glsl, 1.0f, 1.0f, 0.0f);
+  inline static std::string green_fragment_glsl =
+      std::format(fragment_glsl, 0.0f, 1.0f, 0.0f);
+  inline static std::string blue_fragment_glsl =
+      std::format(fragment_glsl, 0.0f, 0.0f, 1.0f);
+  Shader yellow_shader_ = {*window_, vertex_glsl, yellow_fragment_glsl};
+  Shader green_shader_ = {*window_, vertex_glsl, green_fragment_glsl};
+  Shader blue_shader_ = {*window_, vertex_glsl, blue_fragment_glsl};
 };
 
 class RoboticCar {
 public:
   RoboticCar(Window &window, const MyMesh &mesh,
              std::string_view line_image_path)
-      : window_(window),
+      : window_(&window),
         image_data_([line_image_path, this]() -> unsigned char * {
           stbi_set_flip_vertically_on_load(true);
+          if (line_image_path.empty()) {
+            throw std::runtime_error("Texture image path is empty");
+          }
           unsigned char *data = stbi_load(line_image_path.data(), &image_width_,
                                           &image_height_, &image_channels_, 0);
           if (!data) {
@@ -222,9 +253,13 @@ public:
           return data;
         }()),
         position_({0.0f, 1.5f, 0.0f}), direction_({0.0f, 0.0f, 1.0f}),
-        velocity_(10.0f), carModel_(window, mesh) {}
+        carModel_(window, mesh) {}
 
   ~RoboticCar() = default;
+  RoboticCar(const RoboticCar &) = delete;
+  RoboticCar &operator=(const RoboticCar &) = delete;
+  RoboticCar(RoboticCar &&) = delete;
+  RoboticCar &operator=(RoboticCar &&) = delete;
 
   void setPosition(const glm::vec3 &position) { position_ = position; }
 
@@ -241,11 +276,11 @@ public:
     auto process = [this](auto &...args) {
       std::mdspan<unsigned char, std::dextents<std::size_t, 3>> mdspan(
           image_data_.get(), image_height_, image_width_, image_channels_);
-      auto is_white = [this,
-                       mdspan](const glm::vec3 &relative_position) -> bool {
-        float angle = glm::atan(direction_.x, direction_.z);
-        glm::mat4 matrix =
-            glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+      float angle = glm::atan(direction_.x, direction_.z);
+      glm::mat4 matrix =
+          glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+      auto is_white = [this, mdspan,
+                       &matrix](const glm::vec3 &relative_position) -> bool {
         glm::vec4 rotated_position =
             matrix * glm::vec4(relative_position, 1.0f);
         return mdspan[static_cast<std::size_t>(
@@ -277,14 +312,14 @@ private:
     void operator()(unsigned char *data) const { stbi_image_free(data); }
   };
 
-  Window &window_;
+  Window *window_;
   std::unique_ptr<unsigned char, ImageDeleter> image_data_;
   int image_width_;
   int image_height_;
   int image_channels_;
   glm::vec3 position_;
   glm::vec3 direction_;
-  float velocity_;
+  float velocity_ = {10.0f};
   CarModel carModel_;
 
   CarModel::Sensor sensor1_ = {.relative_position =
@@ -305,46 +340,47 @@ private:
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
 
-  enum class State { Forward, TurnLeft, TurnRight, Stop };
+  enum class State : std::uint8_t { Forward, TurnLeft, TurnRight, Stop };
 
   void algorithm(bool sensor1, bool sensor2, bool sensor3, bool sensor4,
                  bool sensor5) {
-    static State current_state = State::Forward;
+    using enum State;
+    static State current_state = Forward;
     if (!sensor3) {
       // 前方有线，继续前进
-      current_state = State::Forward;
+      current_state = Forward;
     } else if (sensor2 && !sensor4) {
       // 左侧有线，右侧无线，向右转
-      current_state = State::TurnRight;
+      current_state = TurnRight;
     } else if (!sensor2 && sensor4) {
       // 右侧有线，左侧无线，向左转
-      current_state = State::TurnLeft;
+      current_state = TurnLeft;
     } else if (sensor1 && !sensor5) {
       // 左侧最远有线，右侧最远无线，向右转
-      current_state = State::TurnRight;
+      current_state = TurnRight;
     } else if (!sensor1 && sensor5) {
       // 右侧最远有线，左侧最远无线，向左转
-      current_state = State::TurnLeft;
+      current_state = TurnLeft;
     }
     switch (current_state) {
-    case State::Forward:
+    case Forward:
       // Already handled above
       break;
-    case State::TurnLeft: {
+    case TurnLeft: {
       glm::vec4 curr_direction = glm::vec4(direction_, 1.0f);
       glm::mat4 rotation =
           glm::rotate(glm::mat4(1.0f), glm::radians(-1.0f / 5.0f),
                       glm::vec3(0.0f, 1.0f, 0.0f));
       direction_ = glm::normalize(glm::vec3(rotation * curr_direction));
     } break;
-    case State::TurnRight: {
+    case TurnRight: {
       glm::vec4 curr_direction = glm::vec4(direction_, 1.0f);
       glm::mat4 rotation =
           glm::rotate(glm::mat4(1.0f), glm::radians(1.0f / 5.0f),
                       glm::vec3(0.0f, 1.0f, 0.0f));
       direction_ = glm::normalize(glm::vec3(rotation * curr_direction));
     } break;
-    case State::Stop:
+    case Stop:
       velocity_ = 0.0f;
       break;
     default:

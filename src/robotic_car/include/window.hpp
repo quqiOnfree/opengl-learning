@@ -56,35 +56,37 @@ public:
     /* Make the window's context current */
     glfwMakeContextCurrent(window_);
     glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(
-        window_, [](GLFWwindow *window, double xpos, double ypos) {
-          static float lastX = xpos, lastY = ypos;
-          static float yaw = -90.0f;
-          static float pitch = 0.0f;
+    glfwSetCursorPosCallback(window_, [](GLFWwindow *window, double xpos,
+                                         double ypos) {
+      static double lastX = xpos, lastY = ypos;
+      static double yaw = -90.0f;
+      static double pitch = 0.0f;
 
-          float xoffset = xpos - lastX;
-          float yoffset = lastY - ypos;
-          lastX = xpos;
-          lastY = ypos;
+      double xoffset = xpos - lastX;
+      double yoffset = lastY - ypos;
+      lastX = xpos;
+      lastY = ypos;
 
-          float sensitivity = 0.05f;
-          xoffset *= sensitivity;
-          yoffset *= sensitivity;
+      double sensitivity = 0.05f;
+      xoffset *= sensitivity;
+      yoffset *= sensitivity;
 
-          yaw += xoffset;
-          pitch += yoffset;
+      yaw += xoffset;
+      pitch += yoffset;
 
-          if (pitch > 89.0f)
-            pitch = 89.0f;
-          if (pitch < -89.0f)
-            pitch = -89.0f;
+      if (pitch > 89.0f)
+        pitch = 89.0f;
+      if (pitch < -89.0f)
+        pitch = -89.0f;
 
-          glm::vec3 front;
-          front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-          front.y = sin(glm::radians(pitch));
-          front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-          camera_.setFront(glm::normalize(front));
-        });
+      glm::vec3 front;
+      front.x =
+          static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
+      front.y = static_cast<float>(sin(glm::radians(pitch)));
+      front.z =
+          static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
+      camera_.setFront(glm::normalize(front));
+    });
     glEnable(GL_DEPTH_TEST);
 
     // enable experimental features for core contexts
@@ -131,13 +133,13 @@ public:
   }
 
 private:
-  Window() : width_(0), height_(0) {}
+  Window() {}
 
 private:
   inline static Camera camera_ = {};
   GLFWwindow *window_;
-  int width_;
-  int height_;
+  int width_ = 0;
+  int height_ = 0;
   std::string title_;
   std::vector<std::function<void()>> garbage_callbacks_;
 };

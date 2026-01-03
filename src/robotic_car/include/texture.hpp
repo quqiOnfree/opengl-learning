@@ -18,7 +18,7 @@
 class Texture {
 public:
   Texture(Window &window, std::string_view image_path)
-      : window_(window), shader_(window, R"(
+      : window_(&window), shader_(window, R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
@@ -38,7 +38,7 @@ void main()
     TexCoord = aTexCoord;
 }
 )",
-                                 R"(
+                                  R"(
 #version 330 core
 out vec4 FragColor;
   
@@ -57,7 +57,7 @@ void main()
     }
 
     // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
+    int width = 0, height = 0, nrChannels = 0;
     // flip vertically so texture coordinates match image origin if needed
     stbi_set_flip_vertically_on_load(true);
     unsigned char *data =
@@ -66,19 +66,43 @@ void main()
       throw std::runtime_error("Failed to load texture image: " +
                                std::string(image_path));
     }
-    float vertices[] = {
+    std::array<float, 32> vertices = {
         // positions                          // colors           // texture
         // coords
-        1.0f * width, 1.0f * height, 0.0f, 1.0f,
-        0.0f,         0.0f,          1.0f, 1.0f, // top right
-        1.0f * width, 0.0f * height, 0.0f, 0.0f,
-        1.0f,         0.0f,          1.0f, 0.0f, // bottom right
-        0.0f * width, 0.0f * height, 0.0f, 0.0f,
-        0.0f,         1.0f,          0.0f, 0.0f, // bottom left
-        0.0f * width, 1.0f * height, 0.0f, 1.0f,
-        1.0f,         0.0f,          0.0f, 1.0f // top left
+        1.0f * static_cast<float>(width),
+        1.0f * static_cast<float>(height),
+        0.0f,
+        1.0f,
+        0.0f,
+        0.0f,
+        1.0f,
+        1.0f, // top right
+        1.0f * static_cast<float>(width),
+        0.0f * static_cast<float>(height),
+        0.0f,
+        0.0f,
+        1.0f,
+        0.0f,
+        1.0f,
+        0.0f, // bottom right
+        0.0f * static_cast<float>(width),
+        0.0f * static_cast<float>(height),
+        0.0f,
+        0.0f,
+        0.0f,
+        1.0f,
+        0.0f,
+        0.0f, // bottom left
+        0.0f * static_cast<float>(width),
+        1.0f * static_cast<float>(height),
+        0.0f,
+        1.0f,
+        1.0f,
+        0.0f,
+        0.0f,
+        1.0f // top left
     };
-    unsigned int indices[] = {
+    std::array<unsigned int, 6> indices = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
     };
@@ -91,23 +115,28 @@ void main()
 
     glBindVertexArray(VAO_);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(),
+                 GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices.data(),
                  GL_STATIC_DRAW);
 
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                          (void *)0);
+                          static_cast<void *>(nullptr));
     glEnableVertexAttribArray(0);
     // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                          (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+        reinterpret_cast<void *>( // NOLINT(performance-no-int-to-ptr)
+            3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                          (void *)(6 * sizeof(float)));
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+        reinterpret_cast<void *>( // NOLINT(performance-no-int-to-ptr)
+            6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
     glGenTextures(1, &texture_);
@@ -124,9 +153,9 @@ void main()
                     GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    window_.addGarbageCallback([VAO = VAO_, VBO = VBO_, EBO = EBO_,
-                                texture = texture_,
-                                program = shader_.getProgramID()]() {
+    window_->addGarbageCallback([VAO = VAO_, VBO = VBO_, EBO = EBO_,
+                                 texture = texture_,
+                                 program = shader_.getProgramID()]() {
       glDeleteTextures(1, &texture);
       glDeleteVertexArrays(1, &VAO);
       glDeleteBuffers(1, &VBO);
@@ -143,7 +172,7 @@ void main()
       format = GL_RGBA;
     // ensure byte-aligned rows for image uploads
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    GLenum internalFormat = GL_RGB8;
+    GLint internalFormat = GL_RGB8;
     if (format == GL_RED)
       internalFormat = GL_R8;
     else if (format == GL_RGB)
@@ -167,9 +196,11 @@ void main()
 
   void reloadProjection() {
     glm::mat4 projection = glm::mat4(1.0f);
-    projection = glm::perspective(
-        glm::radians(45.0f), window_.getWidth() * 1.0f / window_.getHeight(),
-        0.1f, 10000.0f);
+    projection =
+        glm::perspective(glm::radians(45.0f),
+                         static_cast<float>(window_->getWidth()) * 1.0f /
+                             static_cast<float>(window_->getHeight()),
+                         0.1f, 10000.0f);
     shader_.use();
     shader_.setUniform(
         "projection",
@@ -214,12 +245,37 @@ void main()
   }
 
   ~Texture() = default;
+  Texture(const Texture &) = delete;
+  Texture &operator=(const Texture &) = delete;
+  Texture(Texture &&t) noexcept
+      : window_(t.window_), shader_(std::move(t.shader_)), texture_(t.texture_),
+        VAO_(t.VAO_), VBO_(t.VBO_), EBO_(t.EBO_) {
+    t.texture_ = 0;
+    t.VAO_ = 0;
+    t.VBO_ = 0;
+    t.EBO_ = 0;
+  }
+  Texture &operator=(Texture &&t) noexcept {
+    if (this != &t) {
+      window_ = t.window_;
+      shader_ = std::move(t.shader_);
+      texture_ = t.texture_;
+      VAO_ = t.VAO_;
+      VBO_ = t.VBO_;
+      EBO_ = t.EBO_;
+      t.texture_ = 0;
+      t.VAO_ = 0;
+      t.VBO_ = 0;
+      t.EBO_ = 0;
+    }
+    return *this;
+  }
 
 private:
-  Window &window_;
+  Window *window_;
   Shader shader_;
-  unsigned int texture_;
-  unsigned int VAO_;
-  unsigned int VBO_;
-  unsigned int EBO_;
+  unsigned int texture_ = 0;
+  unsigned int VAO_ = 0;
+  unsigned int VBO_ = 0;
+  unsigned int EBO_ = 0;
 };

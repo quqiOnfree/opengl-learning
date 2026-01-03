@@ -5,6 +5,9 @@
 #include "camera.hpp"
 
 void processKeyboardInput(GLFWwindow *window, float deltaTime, Camera &camera) {
+  if (!window) {
+    return;
+  }
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     camera.moveForward(deltaTime);
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)

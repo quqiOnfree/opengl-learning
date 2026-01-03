@@ -9,13 +9,17 @@ class Camera {
   glm::vec3 up_;
 
 public:
-  const float velocity_constant = 25.0f;
+  inline static const float velocity_constant = 25.0f;
 
   Camera()
       : position_(0.0f, 100.0f, 0.0f), front_(0.0f, 0.0f, -1.0f),
         up_(0.0f, 1.0f, 0.0f) {}
 
   ~Camera() = default;
+  Camera(const Camera &) = default;
+  Camera &operator=(const Camera &) = default;
+  Camera(Camera &&) noexcept = default;
+  Camera &operator=(Camera &&) noexcept = default;
 
   glm::mat4 getViewMatrix() const {
     return glm::lookAt(position_, position_ + front_, up_);

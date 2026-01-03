@@ -14,13 +14,15 @@ using MyMesh = OpenMesh::TriMesh_ArrayKernelT<>;
 
 class MeshVertexBufferObject {
 public:
-  MeshVertexBufferObject(const MyMesh &mesh) : vertices_(nullptr), VBO_(0) {
-    n_faces_ = mesh.n_faces();
+  MeshVertexBufferObject(const MyMesh &mesh)
+      : vertices_(nullptr), VBO_(0), n_faces_(mesh.n_faces()) {
 
     glGenBuffers(1, &VBO_);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
 
-    vertices_ = std::make_unique<float[]>(mesh.n_faces() * 3 * 6);
+    vertices_ =
+        std::make_unique<float[]>( // NOLINT(cppcoreguidelines-avoid-c-arrays)
+            mesh.n_faces() * 3 * 6);
     size_t idx = 0;
 
     for (const auto &face : mesh.faces()) {
@@ -42,14 +44,21 @@ public:
       vertices_[idx++] = point3[2];
     }
 
-    glBufferData(GL_ARRAY_BUFFER, mesh.n_faces() * 3 * 3 * sizeof(float),
-                 vertices_.get(), GL_STATIC_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        mesh.n_faces() // NOLINT(cppcoreguidelines-narrowing-conversions)
+            * 3 * 3 * sizeof(float),
+        vertices_.get(), GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
 
   template <std::size_t N>
-  MeshVertexBufferObject(const float (&matrix)[N][3][3]) {
-    vertices_ = std::make_unique<float[]>(N);
+  MeshVertexBufferObject(
+      const float( // NOLINT(cppcoreguidelines-avoid-c-arrays)
+          &matrix)[N][3][3]) {
+    vertices_ =
+        std::make_unique<float[]>( // NOLINT(cppcoreguidelines-avoid-c-arrays)
+            N);
     size_t idx = 0;
 
     n_faces_ = N * 3;
@@ -68,12 +77,31 @@ public:
       vertices_[idx++] = matrix[i][2][2];
     }
 
-    glBufferData(GL_ARRAY_BUFFER, n_faces_ * 3 * 3 * sizeof(float),
-                 vertices_.get(), GL_STATIC_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<
+            long long>( // NOLINT(cppcoreguidelines-narrowing-conversions)
+            n_faces_) *
+            3 * 3 * sizeof(float),
+        vertices_.get(), GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
   }
 
   ~MeshVertexBufferObject() noexcept { release(); }
+  MeshVertexBufferObject(const MeshVertexBufferObject &) = delete;
+  MeshVertexBufferObject &operator=(const MeshVertexBufferObject &) = delete;
+  MeshVertexBufferObject(MeshVertexBufferObject &&VBO) noexcept
+      : vertices_(std::move(VBO.vertices_)), n_faces_(VBO.n_faces_),
+        VBO_(std::exchange(VBO.VBO_, 0u)) {}
+  MeshVertexBufferObject &operator=(MeshVertexBufferObject &&VBO) noexcept {
+    if (this != &VBO) {
+      release();
+      vertices_ = std::move(VBO.vertices_);
+      n_faces_ = VBO.n_faces_;
+      VBO_ = std::exchange(VBO.VBO_, 0u);
+    }
+    return *this;
+  }
 
   void release() {
     if (VBO_) {
@@ -96,7 +124,8 @@ public:
   std::size_t n_faces() const { return n_faces_; }
 
 private:
-  std::unique_ptr<float[]> vertices_;
+  std::unique_ptr<float[]> // NOLINT(cppcoreguidelines-avoid-c-arrays)
+      vertices_;
   std::size_t n_faces_;
   unsigned int VBO_;
 };
@@ -104,15 +133,30 @@ private:
 class VertexArrayObject {
 public:
   template <typename Set>
-  VertexArrayObject(const MeshVertexBufferObject &VBO, Set set) : VBO_(VBO) {
+  VertexArrayObject(const MeshVertexBufferObject &VBO, Set set) : VBO_(&VBO) {
     glGenVertexArrays(1, &VAO_);
     glBindVertexArray(VAO_);
-    VBO.bind();
+    VBO_->bind();
     std::invoke(set);
     glBindVertexArray(0);
   }
 
   ~VertexArrayObject() { release(); }
+  VertexArrayObject(const VertexArrayObject &) = delete;
+  VertexArrayObject &operator=(const VertexArrayObject &) = delete;
+  VertexArrayObject(VertexArrayObject &&VAO) noexcept
+      : VAO_(VAO.VAO_), VBO_(VAO.VBO_) {
+    VAO.VAO_ = 0;
+  }
+  VertexArrayObject &operator=(VertexArrayObject &&VAO) noexcept {
+    if (this != &VAO) {
+      release();
+      VAO_ = VAO.VAO_;
+      VBO_ = VAO.VBO_;
+      VAO.VAO_ = 0;
+    }
+    return *this;
+  }
 
   void release() {
     if (!VAO_) {
@@ -127,10 +171,10 @@ public:
 
   void draw() const {
     bind();
-    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(VBO_.n_faces() * 3));
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(VBO_->n_faces() * 3));
   }
 
 private:
   unsigned int VAO_;
-  const MeshVertexBufferObject &VBO_;
+  const MeshVertexBufferObject *VBO_;
 };
