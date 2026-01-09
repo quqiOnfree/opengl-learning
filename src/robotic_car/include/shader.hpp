@@ -10,18 +10,18 @@
 
 class Shader {
 public:
-  Shader(Window &window, std::string_view vertexSource,
+  Shader(std::string_view vertexSource,
          std::string_view fragmentSource)
       : programID_(CreateShader(vertexSource, fragmentSource)) {
     if (programID_ == 0) {
       throw std::runtime_error("Failed to create shader program");
     }
-
-    window.addGarbageCallback(
-        [program = programID_]() { glDeleteProgram(program); });
   }
 
-  ~Shader() = default;
+  ~Shader() noexcept {
+    glDeleteProgram(programID_);
+  }
+  
   Shader(const Shader &) = delete;
   Shader &operator=(const Shader &) = delete;
   Shader(Shader &&s) noexcept : programID_(s.programID_) { s.programID_ = 0; }

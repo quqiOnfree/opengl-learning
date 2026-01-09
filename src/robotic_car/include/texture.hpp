@@ -17,8 +17,8 @@
 
 class Texture {
 public:
-  Texture(Window &window, std::string_view image_path)
-      : window_(&window), shader_(window, R"(
+  Texture(const Window& window, std::string_view image_path)
+      : shader_(R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
@@ -153,16 +153,6 @@ void main()
                     GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    window_->addGarbageCallback([VAO = VAO_, VBO = VBO_, EBO = EBO_,
-                                 texture = texture_,
-                                 program = shader_.getProgramID()]() {
-      glDeleteTextures(1, &texture);
-      glDeleteVertexArrays(1, &VAO);
-      glDeleteBuffers(1, &VBO);
-      glDeleteBuffers(1, &EBO);
-      glDeleteProgram(program);
-    });
-
     GLenum format = GL_RGB;
     if (nrChannels == 1)
       format = GL_RED;
@@ -191,15 +181,15 @@ void main()
       glUniform1i(texLoc, 0);
     }
 
-    reloadProjection();
+    reloadProjection(window);
   }
 
-  void reloadProjection() {
+  void reloadProjection(const Window &window) {
     glm::mat4 projection = glm::mat4(1.0f);
     projection =
         glm::perspective(glm::radians(45.0f),
-                         static_cast<float>(window_->getWidth()) * 1.0f /
-                             static_cast<float>(window_->getHeight()),
+                         static_cast<float>(window.getWidth()) * 1.0f /
+                             static_cast<float>(window.getHeight()),
                          0.1f, 10000.0f);
     shader_.use();
     shader_.setUniform(
@@ -244,11 +234,16 @@ void main()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   }
 
-  ~Texture() = default;
+  ~Texture() noexcept {
+    glDeleteTextures(1, &texture_);
+    glDeleteVertexArrays(1, &VAO_);
+    glDeleteBuffers(1, &VBO_);
+    glDeleteBuffers(1, &EBO_);
+  }
   Texture(const Texture &) = delete;
   Texture &operator=(const Texture &) = delete;
   Texture(Texture &&t) noexcept
-      : window_(t.window_), shader_(std::move(t.shader_)), texture_(t.texture_),
+      : shader_(std::move(t.shader_)), texture_(t.texture_),
         VAO_(t.VAO_), VBO_(t.VBO_), EBO_(t.EBO_) {
     t.texture_ = 0;
     t.VAO_ = 0;
@@ -257,7 +252,6 @@ void main()
   }
   Texture &operator=(Texture &&t) noexcept {
     if (this != &t) {
-      window_ = t.window_;
       shader_ = std::move(t.shader_);
       texture_ = t.texture_;
       VAO_ = t.VAO_;
@@ -272,7 +266,6 @@ void main()
   }
 
 private:
-  Window *window_;
   Shader shader_;
   unsigned int texture_ = 0;
   unsigned int VAO_ = 0;

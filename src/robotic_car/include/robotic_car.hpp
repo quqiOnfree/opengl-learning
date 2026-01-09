@@ -20,6 +20,7 @@
 #include "mesh_loader.hpp"
 #include "shader.hpp"
 #include "window.hpp"
+#include "timer.hpp"
 
 class CarModel {
 public:
@@ -31,8 +32,8 @@ public:
     float scale;
   };
 
-  CarModel(Window &window, const MyMesh &mesh)
-      : window_(&window), cubeVBO_(mesh), cubeVAO_(cubeVBO_, []() {
+  CarModel(const Window& window, const MyMesh &mesh)
+      : cubeVBO_(mesh), cubeVAO_(cubeVBO_, []() {
           glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                                 (void *)0);
           glEnableVertexAttribArray(0);
@@ -41,20 +42,19 @@ public:
     cubeVBO_.bind();
     cubeVAO_.unbind();
 
-    reloadProjection();
+    reloadProjection(window);
   }
   ~CarModel() = default;
   CarModel(const CarModel &) = delete;
   CarModel &operator=(const CarModel &) = delete;
   CarModel(CarModel &&c) noexcept
-      : window_(c.window_), cubeVBO_(std::move(c.cubeVBO_)),
+      : cubeVBO_(std::move(c.cubeVBO_)),
         cubeVAO_(std::move(c.cubeVAO_)),
         yellow_shader_(std::move(c.yellow_shader_)),
         green_shader_(std::move(c.green_shader_)),
         blue_shader_(std::move(c.blue_shader_)) {}
   CarModel &operator=(CarModel &&c) noexcept {
     if (this != &c) {
-      window_ = c.window_;
       cubeVBO_ = std::move(c.cubeVBO_);
       cubeVAO_ = std::move(c.cubeVAO_);
       yellow_shader_ = std::move(c.yellow_shader_);
@@ -64,12 +64,12 @@ public:
     return *this;
   }
 
-  void reloadProjection() {
+  void reloadProjection(const Window &window) {
     glm::mat4 projection = glm::mat4(1.0f);
     projection =
         glm::perspective(glm::radians(45.0f),
-                         static_cast<float>(window_->getWidth()) * 1.0f /
-                             static_cast<float>(window_->getHeight()),
+                         static_cast<float>(window.getWidth()) * 1.0f /
+                             static_cast<float>(window.getHeight()),
                          0.1f, 10000.0f);
 
     yellow_shader_.use();
@@ -196,7 +196,6 @@ private:
   }
 
 private:
-  Window *window_;
   MeshVertexBufferObject cubeVBO_;
   VertexArrayObject cubeVAO_;
   inline static constexpr char // NOLINT(cppcoreguidelines-avoid-c-arrays)
@@ -230,16 +229,16 @@ void main()
       std::format(fragment_glsl, 0.0f, 1.0f, 0.0f);
   inline static std::string blue_fragment_glsl =
       std::format(fragment_glsl, 0.0f, 0.0f, 1.0f);
-  Shader yellow_shader_ = {*window_, vertex_glsl, yellow_fragment_glsl};
-  Shader green_shader_ = {*window_, vertex_glsl, green_fragment_glsl};
-  Shader blue_shader_ = {*window_, vertex_glsl, blue_fragment_glsl};
+  Shader yellow_shader_ = {vertex_glsl, yellow_fragment_glsl};
+  Shader green_shader_ = {vertex_glsl, green_fragment_glsl};
+  Shader blue_shader_ = {vertex_glsl, blue_fragment_glsl};
 };
 
 class RoboticCar {
 public:
-  RoboticCar(Window &window, const MyMesh &mesh,
+  RoboticCar(const Window &window, const MyMesh &mesh,
              std::string_view line_image_path)
-      : window_(&window),
+      : 
         image_data_([line_image_path, this]() -> unsigned char * {
           stbi_set_flip_vertically_on_load(true);
           if (line_image_path.empty()) {
@@ -267,7 +266,7 @@ public:
     direction_ = glm::normalize(direction);
   }
 
-  void reloadProjection() { carModel_.reloadProjection(); }
+  void reloadProjection(const Window& window) { carModel_.reloadProjection(window); }
 
   void updateView(const glm::mat4 &view) { carModel_.updateView(view); }
 
@@ -296,15 +295,15 @@ public:
                              ? CarModel::Color::Green
                              : CarModel::Color::Blue),
        ...);
-      algorithm(is_white(args.relative_position)...);
+      algorithm(!is_white(args.relative_position)...);
     };
-    process(sensor1_, sensor2_, sensor3_, sensor4_, sensor5_);
+    process(sensor1_, sensor2_, sensor3_, sensor4_, sensor5_, sensor6_);
     position_ += velocity_ * deltaTime * direction_;
   }
 
   void draw() {
     carModel_.draw(position_, direction_, sensor1_, sensor2_, sensor3_,
-                   sensor4_, sensor5_);
+                   sensor4_, sensor5_, sensor6_);
   }
 
 private:
@@ -312,11 +311,10 @@ private:
     void operator()(unsigned char *data) const { stbi_image_free(data); }
   };
 
-  Window *window_;
-  std::unique_ptr<unsigned char, ImageDeleter> image_data_;
   int image_width_;
   int image_height_;
   int image_channels_;
+  std::unique_ptr<unsigned char, ImageDeleter> image_data_;
   glm::vec3 position_;
   glm::vec3 direction_;
   float velocity_ = {10.0f};
@@ -327,41 +325,48 @@ private:
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
   CarModel::Sensor sensor2_ = {.relative_position =
-                                   glm::vec3(-1.0f, 0.0f, 2.0f),
+                                   glm::vec3(0.0f, 0.0f, 4.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor3_ = {.relative_position = glm::vec3(0.0f, 0.0f, 3.0f),
+  CarModel::Sensor sensor3_ = {.relative_position = glm::vec3(3.0f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor4_ = {.relative_position = glm::vec3(1.0f, 0.0f, 2.0f),
+  CarModel::Sensor sensor4_ = {.relative_position = glm::vec3(-1.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor5_ = {.relative_position = glm::vec3(3.0f, 0.0f, 2.0f),
+  CarModel::Sensor sensor5_ = {.relative_position = glm::vec3(0.0f, 0.0f, 2.0f),
+                               .color = CarModel::Color::Blue,
+                               .scale = 0.1f};
+  CarModel::Sensor sensor6_ = {.relative_position = glm::vec3(1.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
 
   enum class State : std::uint8_t { Forward, TurnLeft, TurnRight, Stop };
 
-  void algorithm(bool sensor1, bool sensor2, bool sensor3, bool sensor4,
-                 bool sensor5) {
+  void algorithm(bool s1, bool s2, bool s3, bool s4,
+                 bool s5, bool s6) {
     using enum State;
     static State current_state = Forward;
-    if (!sensor3) {
-      // 前方有线，继续前进
-      current_state = Forward;
-    } else if (sensor2 && !sensor4) {
-      // 左侧有线，右侧无线，向右转
-      current_state = TurnRight;
-    } else if (!sensor2 && sensor4) {
-      // 右侧有线，左侧无线，向左转
-      current_state = TurnLeft;
-    } else if (sensor1 && !sensor5) {
-      // 左侧最远有线，右侧最远无线，向右转
-      current_state = TurnRight;
-    } else if (!sensor1 && sensor5) {
-      // 右侧最远有线，左侧最远无线，向左转
-      current_state = TurnLeft;
+
+    static Timer timer;
+    static int count = 0;
+
+    if (timer.is_expired()) {
+      if ((s4 && !s6) || (s1 && !s6)) {
+        if (count == 0) {
+          current_state = Forward;
+          std::println("Forward, count = {}", count++);
+          timer.expire_after(std::chrono::milliseconds(500));
+        } else {
+          current_state = TurnLeft;
+        }
+      } else if ((!s4 && s6) || (!s4 && s3)) {
+        current_state = TurnRight;
+      } else if (s5) {
+        current_state = Forward;
+      }
     }
+
     switch (current_state) {
     case Forward:
       // Already handled above

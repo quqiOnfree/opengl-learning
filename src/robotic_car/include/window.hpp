@@ -15,10 +15,6 @@
 class Window {
 public:
   ~Window() {
-    for (auto &func : garbage_callbacks_) {
-      std::invoke(func);
-    }
-
     glfwTerminate();
   }
 
@@ -127,11 +123,6 @@ public:
   Camera &getCamera() { return camera_; }
   const Camera &getCamera() const { return camera_; }
 
-  template <typename Func, std::enable_if_t<std::is_invocable_v<Func>, int> = 0>
-  void addGarbageCallback(Func &&func) {
-    garbage_callbacks_.emplace_back(std::forward<Func>(func));
-  }
-
 private:
   Window() {}
 
@@ -141,5 +132,4 @@ private:
   int width_ = 0;
   int height_ = 0;
   std::string title_;
-  std::vector<std::function<void()>> garbage_callbacks_;
 };
