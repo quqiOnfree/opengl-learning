@@ -321,14 +321,14 @@ private:
   CarModel carModel_;
 
   CarModel::Sensor sensor1_ = {.relative_position =
-                                   glm::vec3(-3.0f, 0.0f, 2.0f),
+                                   glm::vec3(-2.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
   CarModel::Sensor sensor2_ = {.relative_position =
                                    glm::vec3(0.0f, 0.0f, 4.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor3_ = {.relative_position = glm::vec3(3.0f, 0.0f, 2.0f),
+  CarModel::Sensor sensor3_ = {.relative_position = glm::vec3(2.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
   CarModel::Sensor sensor4_ = {.relative_position = glm::vec3(-1.5f, 0.0f, 2.0f),
@@ -352,18 +352,50 @@ private:
     static int count = 0;
 
     if (timer.is_expired()) {
-      if ((s4 && !s6) || (s1 && !s6)) {
-        if (count == 0) {
-          current_state = Forward;
-          std::println("Forward, count = {}", count++);
-          timer.expire_after(std::chrono::milliseconds(500));
-        } else {
-          current_state = TurnLeft;
-        }
-      } else if ((!s4 && s6) || (!s4 && s3)) {
-        current_state = TurnRight;
-      } else if (s5) {
+      if (!s2 && !s3 && s4 && s5 && !s6 && count == 0) {
         current_state = Forward;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (!s2 && s4 && s5 && s6 && count == 1) {
+        current_state = TurnRight;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (s4 && s5 && s6 && count == 2) {
+        current_state = TurnRight;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (s1 && s2 && !s3 && s4 && s5 && !s6 && count == 3) {
+        current_state = TurnLeft;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (!s1 && !s2 && s3 && s4 && s5 && s6 && count == 4) {
+        current_state = TurnRight;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (!s2 && !s3 && s4 && s5 && !s6 && count == 5) {
+        current_state = TurnLeft;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (s2 && !s3 && s4 && s5 && !s6 && count == 6) {
+        current_state = Forward;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (s2 && s4 && s5 && s6 && count == 7) {
+        current_state = TurnRight;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (!s1 && s2 && !s4 && s5 && s6 && count == 8) {
+        current_state = TurnRight;
+        count++;
+        timer.expire_after(std::chrono::milliseconds(250));
+      } else if (s1 || s4) {
+        current_state = TurnLeft;
+      } else if (s3 || s6) {
+        current_state = TurnRight;
+      } else if (s2 || s5) {
+        current_state = Forward;
+      } else if (s1 && s2 && s3 && s4 && s5 && s6) {
+        current_state = Stop;
       }
     }
 
