@@ -14,9 +14,7 @@
 
 class Window {
 public:
-  ~Window() {
-    glfwTerminate();
-  }
+  ~Window() { glfwTerminate(); }
 
   Window(const Window &) = delete;
   Window &operator=(const Window &) = delete;

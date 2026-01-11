@@ -19,8 +19,8 @@
 
 #include "mesh_loader.hpp"
 #include "shader.hpp"
-#include "window.hpp"
 #include "timer.hpp"
+#include "window.hpp"
 
 class CarModel {
 public:
@@ -32,7 +32,7 @@ public:
     float scale;
   };
 
-  CarModel(const Window& window, const MyMesh &mesh)
+  CarModel(const Window &window, const MyMesh &mesh)
       : cubeVBO_(mesh), cubeVAO_(cubeVBO_, []() {
           glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                                 (void *)0);
@@ -48,8 +48,7 @@ public:
   CarModel(const CarModel &) = delete;
   CarModel &operator=(const CarModel &) = delete;
   CarModel(CarModel &&c) noexcept
-      : cubeVBO_(std::move(c.cubeVBO_)),
-        cubeVAO_(std::move(c.cubeVAO_)),
+      : cubeVBO_(std::move(c.cubeVBO_)), cubeVAO_(std::move(c.cubeVAO_)),
         yellow_shader_(std::move(c.yellow_shader_)),
         green_shader_(std::move(c.green_shader_)),
         blue_shader_(std::move(c.blue_shader_)) {}
@@ -66,11 +65,10 @@ public:
 
   void reloadProjection(const Window &window) {
     glm::mat4 projection = glm::mat4(1.0f);
-    projection =
-        glm::perspective(glm::radians(45.0f),
-                         static_cast<float>(window.getWidth()) * 1.0f /
-                             static_cast<float>(window.getHeight()),
-                         0.1f, 10000.0f);
+    projection = glm::perspective(glm::radians(45.0f),
+                                  static_cast<float>(window.getWidth()) * 1.0f /
+                                      static_cast<float>(window.getHeight()),
+                                  0.1f, 10000.0f);
 
     yellow_shader_.use();
     yellow_shader_.setUniform(
@@ -238,8 +236,7 @@ class RoboticCar {
 public:
   RoboticCar(const Window &window, const MyMesh &mesh,
              std::string_view line_image_path)
-      : 
-        image_data_([line_image_path, this]() -> unsigned char * {
+      : image_data_([line_image_path, this]() -> unsigned char * {
           stbi_set_flip_vertically_on_load(true);
           if (line_image_path.empty()) {
             throw std::runtime_error("Texture image path is empty");
@@ -266,7 +263,9 @@ public:
     direction_ = glm::normalize(direction);
   }
 
-  void reloadProjection(const Window& window) { carModel_.reloadProjection(window); }
+  void reloadProjection(const Window &window) {
+    carModel_.reloadProjection(window);
+  }
 
   void updateView(const glm::mat4 &view) { carModel_.updateView(view); }
 
@@ -282,11 +281,17 @@ public:
                        &matrix](const glm::vec3 &relative_position) -> bool {
         glm::vec4 rotated_position =
             matrix * glm::vec4(relative_position, 1.0f);
-        return mdspan[static_cast<std::size_t>(
-                          (position_.z + rotated_position.z) * 10.0f),
+        double average = 0.0f;
+        for (size_t i = 0; i < 10; ++i) {
+          for (size_t j = 0; j < 10; ++j) {
+            average += mdspan[static_cast<std::size_t>(
+                          (position_.z + rotated_position.z) * 10.0f) + i - 5,
                       static_cast<std::size_t>(
-                          (position_.x + rotated_position.x) * 10.0f),
-                      0] > 128;
+                          (position_.x + rotated_position.x) * 10.0f) + j - 5,
+                      0];
+          }
+        }
+        return average / 100.0 > 128;
       };
       auto changeColor = [](CarModel::Sensor &sensor, CarModel::Color color) {
         sensor.color = color;
@@ -324,14 +329,14 @@ private:
                                    glm::vec3(-2.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor2_ = {.relative_position =
-                                   glm::vec3(0.0f, 0.0f, 4.0f),
+  CarModel::Sensor sensor2_ = {.relative_position = glm::vec3(0.0f, 0.0f, 4.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
   CarModel::Sensor sensor3_ = {.relative_position = glm::vec3(2.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
-  CarModel::Sensor sensor4_ = {.relative_position = glm::vec3(-1.5f, 0.0f, 2.0f),
+  CarModel::Sensor sensor4_ = {.relative_position =
+                                   glm::vec3(-1.5f, 0.0f, 2.0f),
                                .color = CarModel::Color::Blue,
                                .scale = 0.1f};
   CarModel::Sensor sensor5_ = {.relative_position = glm::vec3(0.0f, 0.0f, 2.0f),
@@ -343,8 +348,7 @@ private:
 
   enum class State : std::uint8_t { Forward, TurnLeft, TurnRight, Stop };
 
-  void algorithm(bool s1, bool s2, bool s3, bool s4,
-                 bool s5, bool s6) {
+  void algorithm(bool s1, bool s2, bool s3, bool s4, bool s5, bool s6) {
     using enum State;
     static State current_state = Forward;
 
@@ -354,40 +358,49 @@ private:
     if (timer.is_expired()) {
       if (!s2 && !s3 && s4 && s5 && !s6 && count == 0) {
         current_state = Forward;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (!s2 && s4 && s5 && s6 && count == 1) {
         current_state = TurnRight;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (s4 && s5 && s6 && count == 2) {
         current_state = TurnRight;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
-      } else if (s1 && s2 && !s3 && s4 && s5 && !s6 && count == 3) {
+        timer.expire_after(std::chrono::milliseconds(400));
+      } else if (s2 && !s3 && s4 && s5 && !s6 && count == 3) {
         current_state = TurnLeft;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
-      } else if (!s1 && !s2 && s3 && s4 && s5 && s6 && count == 4) {
+        timer.expire_after(std::chrono::milliseconds(300));
+      } else if (!s2 && s4 && s5 && s6 && count == 4) {
         current_state = TurnRight;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (!s2 && !s3 && s4 && s5 && !s6 && count == 5) {
         current_state = TurnLeft;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (s2 && !s3 && s4 && s5 && !s6 && count == 6) {
         current_state = Forward;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (s2 && s4 && s5 && s6 && count == 7) {
         current_state = TurnRight;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (!s1 && s2 && !s4 && s5 && s6 && count == 8) {
         current_state = TurnRight;
+        std::println("count = {}", count);
         count++;
-        timer.expire_after(std::chrono::milliseconds(250));
+        timer.expire_after(std::chrono::milliseconds(300));
       } else if (s1 || s4) {
         current_state = TurnLeft;
       } else if (s3 || s6) {

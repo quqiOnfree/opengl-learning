@@ -17,7 +17,7 @@
 
 class Texture {
 public:
-  Texture(const Window& window, std::string_view image_path)
+  Texture(const Window &window, std::string_view image_path)
       : shader_(R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -38,7 +38,7 @@ void main()
     TexCoord = aTexCoord;
 }
 )",
-                                  R"(
+                R"(
 #version 330 core
 out vec4 FragColor;
   
@@ -186,11 +186,10 @@ void main()
 
   void reloadProjection(const Window &window) {
     glm::mat4 projection = glm::mat4(1.0f);
-    projection =
-        glm::perspective(glm::radians(45.0f),
-                         static_cast<float>(window.getWidth()) * 1.0f /
-                             static_cast<float>(window.getHeight()),
-                         0.1f, 10000.0f);
+    projection = glm::perspective(glm::radians(45.0f),
+                                  static_cast<float>(window.getWidth()) * 1.0f /
+                                      static_cast<float>(window.getHeight()),
+                                  0.1f, 10000.0f);
     shader_.use();
     shader_.setUniform(
         "projection",
@@ -243,8 +242,8 @@ void main()
   Texture(const Texture &) = delete;
   Texture &operator=(const Texture &) = delete;
   Texture(Texture &&t) noexcept
-      : shader_(std::move(t.shader_)), texture_(t.texture_),
-        VAO_(t.VAO_), VBO_(t.VBO_), EBO_(t.EBO_) {
+      : shader_(std::move(t.shader_)), texture_(t.texture_), VAO_(t.VAO_),
+        VBO_(t.VBO_), EBO_(t.EBO_) {
     t.texture_ = 0;
     t.VAO_ = 0;
     t.VBO_ = 0;
