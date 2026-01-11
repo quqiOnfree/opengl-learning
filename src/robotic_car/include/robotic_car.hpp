@@ -350,65 +350,29 @@ private:
 
   void algorithm(bool s1, bool s2, bool s3, bool s4, bool s5, bool s6) {
     using enum State;
-    static State current_state = Forward;
+    State current_state = Forward;
 
     static Timer timer;
-    static int count = 0;
 
     if (timer.is_expired()) {
-      if (!s2 && !s3 && s4 && s5 && !s6 && count == 0) {
+      if (s2 || s5) {
         current_state = Forward;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (!s2 && s4 && s5 && s6 && count == 1) {
+      }
+      if (s3 || s6) {
         current_state = TurnRight;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (s4 && s5 && s6 && count == 2) {
-        current_state = TurnRight;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(400));
-      } else if (s2 && !s3 && s4 && s5 && !s6 && count == 3) {
+      }
+      if (s1 || s4) {
         current_state = TurnLeft;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (!s2 && s4 && s5 && s6 && count == 4) {
-        current_state = TurnRight;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (!s2 && !s3 && s4 && s5 && !s6 && count == 5) {
-        current_state = TurnLeft;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (s2 && !s3 && s4 && s5 && !s6 && count == 6) {
-        current_state = Forward;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (s2 && s4 && s5 && s6 && count == 7) {
-        current_state = TurnRight;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (!s1 && s2 && !s4 && s5 && s6 && count == 8) {
-        current_state = TurnRight;
-        std::println("count = {}", count);
-        count++;
-        timer.expire_after(std::chrono::milliseconds(300));
-      } else if (s1 || s4) {
-        current_state = TurnLeft;
-      } else if (s3 || s6) {
-        current_state = TurnRight;
-      } else if (s2 || s5) {
-        current_state = Forward;
-      } else if (s1 && s2 && s3 && s4 && s5 && s6) {
+      }
+      if (s1 && s2 && s3 && s4 && s5 && s6) {
         current_state = Stop;
+      }
+      if (!s1 && !s2 && !s3 && !s4 && !s5 && !s6) {
+        current_state = Forward;
+      }
+      if (s1 && !s2 && s3 && s4 && s5 && s6) {
+        current_state = Forward;
+        timer.expire_after(std::chrono::milliseconds(250));
       }
     }
 
